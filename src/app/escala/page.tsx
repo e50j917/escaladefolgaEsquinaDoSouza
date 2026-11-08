@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, variaveisConfiguradas } from "@/lib/supabase";
-import type { Configuracao, Escala, Funcionario, Regra, Turno } from "@/lib/tipos";
-import { conferirSemana, lerConfigRegras } from "@/lib/regras";
+import { FUNCOES_PADRAO, type Configuracao, type Escala, type Funcionario, type Horario, type Regra, type Turno } from "@/lib/tipos";
+import { conferirSemana, lerConfigRegras, periodoParaConferir } from "@/lib/regras";
+import { faixa } from "@/lib/horarios";
+import { restaurante } from "@/config/restaurante";
 import {
   DIAS_SEMANA,
   diaMes,
@@ -42,6 +44,8 @@ function GradeDaSemana({ hoje }: { hoje: string }) {
   const [regras, setRegras] = useState<Regra[]>([]);
   const [configs, setConfigs] = useState<Configuracao[]>([]);
   const [verAlertas, setVerAlertas] = useState(false);
+  const [horarios, setHorarios] = useState<Horario[]>([]);
+  const [mostrarTodos, setMostrarTodos] = useState(false);
 
   const dias = diasDaSemana(segunda);
 
@@ -54,38 +58,41 @@ function GradeDaSemana({ hoje }: { hoje: string }) {
         return;
       }
       const db = supabase();
-      const [t, f, r, c] = await Promise.all([
+      const [t, f, r, c, h] = await Promise.all([
         db.from("turnos").select("id, nome, hora_inicio, hora_fim, ordem").order("ordem"),
         db
           .from("funcionarios")
-          .select("id, nome, funcao, telefone, cpf, ativo")
+          .select("id, nome, funcao, telefone, cpf, ativo, papel")
           .order("nome"),
         db.from("regras").select("id, dia_semana, turno_id, funcao, minimo"),
         db.from("configuracoes").select("chave, valor"),
+        db.from("horarios").select("funcionario_id, dia_semana, hora_inicio, hora_fim"),
       ]);
-      const falha = t.error ?? f.error ?? r.error ?? c.error;
+      const falha = t.error ?? f.error ?? r.error ?? c.error ?? h.error;
       if (falha) {
         setErro("Não foi possível carregar os dados: " + falha.message);
         return;
       }
       setRegras((r.data ?? []) as Regra[]);
       setConfigs((c.data ?? []) as Configuracao[]);
+      setHorarios((h.data ?? []) as Horario[]);
       setTurnos((t.data ?? []) as Turno[]);
       setFuncionarios((f.data ?? []) as Funcionario[]);
     }
     carregarBase();
   }, []);
 
-  // Escala da semana: recarregada ao trocar de semana.
-  // Inclui o domingo anterior e a segunda seguinte, para a regra de fechar e abrir.
+  // Escala recarregada ao trocar de semana. Carrega o mês inteiro (e os dias
+  // vizinhos da semana) para as regras de domingo, dobradinha e fechar e abrir.
   const carregarEscalas = useCallback(async () => {
     if (!variaveisConfiguradas()) return;
     setCarregando(true);
+    const periodo = periodoParaConferir(segunda);
     const { data, error } = await supabase()
       .from("escalas")
       .select("id, data, turno_id, funcionario_id")
-      .gte("data", somarDias(segunda, -1))
-      .lte("data", somarDias(segunda, 7));
+      .gte("data", periodo.inicio)
+      .lte("data", periodo.fim);
     if (error) setErro("Não foi possível carregar a escala: " + error.message);
     else setEscalas((data ?? []) as Escala[]);
     setCarregando(false);
@@ -110,8 +117,9 @@ function GradeDaSemana({ hoje }: { hoje: string }) {
             escalas,
             regras,
             config: lerConfigRegras(configs),
+            horarios,
           }),
-    [segunda, turnos, funcionarios, escalas, regras, configs],
+    [segunda, turnos, funcionarios, escalas, regras, configs, horarios],
   );
   const semFolga = new Set(
     alertas.filter((a) => a.tipo === "folga").map((a) => a.funcionarioId),
@@ -157,14 +165,46 @@ function GradeDaSemana({ hoje }: { hoje: string }) {
     setSalvandoId(null);
   }
 
-  // No modal: ativos + quem já está escalado mesmo que desativado depois.
-  const listaModal = aberta
-    ? funcionarios.filter(
-        (f) =>
-          f.ativo ||
-          escaladosNa(aberta.data, aberta.turno.id).some((e) => e.funcionario_id === f.id),
-      )
+  const horarioNoDia = (funcionarioId: string, data: string) =>
+    horarios.find(
+      (h) => h.funcionario_id === funcionarioId && h.dia_semana === paraData(data).getDay(),
+    );
+  const ordemSetor = (funcao: string) => {
+    const i = FUNCOES_PADRAO.indexOf(funcao);
+    return i === -1 ? FUNCOES_PADRAO.length : i;
+  };
+  const ehExpediente = aberta?.turno.nome === restaurante.turnoExpediente;
+
+  // No modal: ativos + quem já está escalado mesmo que desativado depois, por setor.
+  // No Expediente, primeiro só quem tem horário nesse dia da semana.
+  const candidatos = aberta
+    ? funcionarios
+        .filter(
+          (f) =>
+            f.ativo ||
+            escaladosNa(aberta.data, aberta.turno.id).some((e) => e.funcionario_id === f.id),
+        )
+        .sort(
+          (a, b) =>
+            ordemSetor(a.funcao) - ordemSetor(b.funcao) || a.nome.localeCompare(b.nome, "pt-BR"),
+        )
     : [];
+  const listaModal =
+    aberta && ehExpediente && !mostrarTodos && horarios.length > 0
+      ? candidatos.filter(
+          (f) =>
+            horarioNoDia(f.id, aberta.data) ||
+            escaladosNa(aberta.data, aberta.turno.id).some((e) => e.funcionario_id === f.id),
+        )
+      : candidatos;
+  const escondidos = candidatos.length - listaModal.length;
+
+  /** Texto do horário do turno na grade. */
+  function horarioDoTurno(t: Turno): string {
+    if (t.nome === restaurante.turnoAlmocoExtra) return restaurante.horarioAlmocoExtra;
+    if (t.nome === restaurante.turnoExpediente) return "horário de cada um";
+    return `${horaCurta(t.hora_inicio)}–${horaCurta(t.hora_fim)}`;
+  }
 
   return (
     <div className="space-y-4">
@@ -251,7 +291,7 @@ function GradeDaSemana({ hoje }: { hoje: string }) {
                 <th className="sticky left-0 z-[1] border-r border-b border-neutral-200 bg-white p-2 text-left align-top">
                   <span className="block font-semibold">{t.nome}</span>
                   <span className="block text-xs font-normal text-neutral-600">
-                    {horaCurta(t.hora_inicio)}–{horaCurta(t.hora_fim)}
+                    {horarioDoTurno(t)}
                   </span>
                 </th>
                 {dias.map((d) => {
@@ -267,7 +307,10 @@ function GradeDaSemana({ hoje }: { hoje: string }) {
                     <td key={d} className="border-b border-neutral-200 p-1 align-top">
                       <button
                         className={`flex min-h-[88px] w-full flex-col items-start gap-1 rounded-lg p-2 text-left active:opacity-80 ${corFundo}`}
-                        onClick={() => setAberta({ data: d, turno: t })}
+                        onClick={() => {
+                          setMostrarTodos(false);
+                          setAberta({ data: d, turno: t });
+                        }}
                       >
                         {lista.length === 0 ? (
                           <span className="text-neutral-400">+ Escalar</span>
@@ -347,6 +390,9 @@ function GradeDaSemana({ hoje }: { hoje: string }) {
                         <span className="block font-semibold">{f.nome}</span>
                         <span className="block text-sm text-neutral-600">
                           {f.funcao}
+                          {f.papel && ` · ${f.papel}`}
+                          {ehExpediente && horarioNoDia(f.id, aberta.data) &&
+                            ` · ${faixa(horarioNoDia(f.id, aberta.data)!)}`}
                           {!f.ativo && " · desativado"}
                         </span>
                       </span>
@@ -358,6 +404,16 @@ function GradeDaSemana({ hoje }: { hoje: string }) {
                 );
               })}
             </ul>
+            {ehExpediente && (escondidos > 0 || mostrarTodos) && (
+              <button
+                className="botao-secundario mt-3 w-full"
+                onClick={() => setMostrarTodos(!mostrarTodos)}
+              >
+                {mostrarTodos
+                  ? "Mostrar só quem trabalha neste dia"
+                  : `Mostrar todos (+${escondidos} sem horário neste dia)`}
+              </button>
+            )}
             {erro && <p className="mt-3 text-red-700">{erro}</p>}
             <button className="botao mt-4 w-full" onClick={() => setAberta(null)}>
               Pronto
