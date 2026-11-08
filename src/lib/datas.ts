@@ -2,6 +2,7 @@
 // Semana começa na segunda-feira e termina no domingo.
 
 export const DIAS_SEMANA_CURTO = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+export const MESES_CURTO = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 export const DIAS_SEMANA = [
   "Domingo",
   "Segunda",

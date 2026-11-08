@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase, variaveisConfiguradas } from "@/lib/supabase";
 import { identidade } from "@/config/identidade";
+import { FolgasEmLeque } from "@/components/FolgasEmLeque";
 
 type Estado =
   | { tipo: "carregando" }
@@ -38,8 +39,10 @@ export default function Inicio() {
 
   return (
     <div className="space-y-5">
+      <FolgasEmLeque />
+
       <section className="space-y-3">
-        <h1 className="text-2xl font-bold">Bem-vindo à {identidade.nome}</h1>
+        <h2 className="text-xl font-bold">Bem-vindo à {identidade.nome}</h2>
         <Link href="/escala" className="botao w-full py-5 text-lg">
           Escala da semana
         </Link>
