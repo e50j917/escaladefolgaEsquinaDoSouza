@@ -24,7 +24,7 @@ export function FolhaDoDia({ dia, ehHoje }: { dia: FolgasDoDia; ehHoje: boolean 
       >
         {DIAS_SEMANA_CURTO[semana].toUpperCase()} · {MESES_CURTO[data.getMonth()]}
         {ehHoje && (
-          <span className="ml-1.5 rounded-md bg-white px-1.5 text-[var(--cor-principal)]">HOJE</span>
+          <span className="ml-1.5 rounded-md bg-[var(--cor-destaque)] px-1.5 text-[#3F0F18]">HOJE</span>
         )}
       </div>
 

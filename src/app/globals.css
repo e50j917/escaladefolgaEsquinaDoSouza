@@ -2,14 +2,32 @@
 
 /* Cores vêm de src/config/identidade.ts e são aplicadas no layout. */
 :root {
-  --cor-principal: #1f3a5f;
-  --cor-secundaria: #f4f1ea;
-  --cor-texto: #1a1a1a;
+  --cor-principal: #6b1e2a;
+  --cor-secundaria: #fbf1d3;
+  --cor-destaque: #e2a93b;
+  --cor-texto: #2a1a14;
+  --cor-cartao: #fffbf0;
 }
 
 @theme inline {
   --color-principal: var(--cor-principal);
   --color-secundaria: var(--cor-secundaria);
+  --color-destaque: var(--cor-destaque);
+}
+
+/* Tons de cinza trocados por tons quentes (marrom), combinando com o vinho e o amarelo. */
+@theme {
+  --color-neutral-50: #faf6ee;
+  --color-neutral-100: #f3ebdd;
+  --color-neutral-200: #e6d7bf;
+  --color-neutral-300: #d4c0a0;
+  --color-neutral-400: #a8907a;
+  --color-neutral-500: #7e6a5a;
+  --color-neutral-600: #63503f;
+  --color-neutral-700: #4e3d30;
+  --color-neutral-800: #3a2c22;
+  --color-neutral-900: #2a1f18;
+  --color-neutral-950: #1a120d;
 }
 
 html,
@@ -18,6 +36,8 @@ body {
   color: var(--cor-texto);
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   -webkit-tap-highlight-color: transparent;
+  /* Caixas de marcar e campos na cor principal (em vez do azul do celular). */
+  accent-color: var(--cor-principal);
   /* Nada pode criar rolagem lateral na página (o leque de folgas passa da largura). */
   overflow-x: clip;
 }
@@ -37,7 +57,54 @@ body {
   @apply w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-base outline-none focus:border-neutral-500;
 }
 .cartao {
-  @apply rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm;
+  @apply rounded-2xl border border-neutral-200 p-4 shadow-sm;
+  background-color: var(--cor-cartao);
+}
+
+/* Nome e títulos com a letra "de placa" (carregada em layout.tsx). */
+h1,
+h2,
+.titulo-marca {
+  font-family: var(--fonte-titulo), Georgia, serif;
+}
+h1 {
+  color: var(--cor-principal);
+}
+
+/* Cabeçalho: parede de tijolos levemente desfocada e escurecida,
+   com uma sombra oval atrás do logo e do nome para destacá-los. */
+.cabecalho-tijolos {
+  position: relative;
+  overflow: hidden;
+  background-color: #4a121c;
+  border-bottom: 4px solid var(--cor-destaque);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.cabecalho-tijolos::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  background: url("/tijolos.svg");
+  background-size: 96px 48px;
+  filter: blur(1.5px) brightness(0.75) saturate(0.9);
+}
+.cabecalho-tijolos::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 70% at 50% 40%, rgba(40, 8, 14, 0.55), transparent 75%);
+}
+.cabecalho-tijolos > * {
+  position: relative;
+  z-index: 1;
+}
+.cabecalho-tijolos .titulo-marca {
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+}
+
+/* Destaque do dia de hoje na grade da escala (mostarda suave). */
+.destaque-hoje {
+  background-color: color-mix(in srgb, var(--cor-destaque) 22%, white);
 }
 
 /* Carrossel em leque (src/components/ui/card-fan-carousel.tsx).

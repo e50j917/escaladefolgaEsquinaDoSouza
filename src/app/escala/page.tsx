@@ -237,7 +237,7 @@ function GradeDaSemana({ hoje }: { hoje: string }) {
                 <th
                   key={d}
                   className={`min-w-[110px] border-b border-neutral-200 p-2 text-center ${
-                    d === hoje ? "bg-amber-50" : ""
+                    d === hoje ? "destaque-hoje" : ""
                   }`}
                 >
                   {rotuloDia(d)}
@@ -261,7 +261,7 @@ function GradeDaSemana({ hoje }: { hoje: string }) {
                     avisos.length > 0
                       ? "bg-red-100 ring-2 ring-red-400"
                       : d === hoje
-                        ? "bg-amber-50"
+                        ? "destaque-hoje"
                         : "bg-neutral-50";
                   return (
                     <td key={d} className="border-b border-neutral-200 p-1 align-top">
