@@ -18,9 +18,10 @@ export function Cabecalho() {
           <Image
             src={identidade.logo}
             alt={identidade.nome}
-            width={36}
-            height={36}
-            className="h-9 w-9 rounded-md bg-white object-contain p-0.5"
+            width={44}
+            height={44}
+            priority
+            className="h-11 w-11 rounded-full object-cover"
           />
         ) : null}
         <span className="text-lg font-bold">{identidade.nome}</span>

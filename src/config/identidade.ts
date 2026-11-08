@@ -9,5 +9,5 @@ export const identidade = {
   // Cor de fundo das páginas
   corSecundaria: "#F4F1EA",
   // Caminho do logo dentro da pasta public, ou null
-  logo: null as string | null,
+  logo: "/logo-esquina.png" as string | null,
 };
