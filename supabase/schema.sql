@@ -16,6 +16,22 @@ create table if not exists funcionarios (
   ativo boolean not null default true,
   criado_em timestamptz not null default now()
 );
+-- Papel na equipe (ex.: Abertura, Fechamento, Passador de chope, Gerente)
+alter table funcionarios add column if not exists papel text;
+-- true = funcionário fictício de exemplo (para demonstrar o sistema)
+alter table funcionarios add column if not exists exemplo boolean not null default false;
+
+-- Horário de cada funcionário por dia da semana (0 = domingo ... 6 = sábado).
+-- Sem linha no dia = não trabalha. hora_fim menor que hora_inicio (ex.: 00:00)
+-- significa que termina no dia seguinte.
+create table if not exists horarios (
+  id uuid primary key default gen_random_uuid(),
+  funcionario_id uuid not null references funcionarios (id) on delete cascade,
+  dia_semana smallint not null check (dia_semana between 0 and 6),
+  hora_inicio time not null,
+  hora_fim time not null,
+  unique (funcionario_id, dia_semana)
+);
 
 -- Turnos de trabalho (ex.: Almoço, Jantar)
 create table if not exists turnos (
@@ -62,18 +78,21 @@ alter table turnos enable row level security;
 alter table escalas enable row level security;
 alter table regras enable row level security;
 alter table configuracoes enable row level security;
+alter table horarios enable row level security;
 
 drop policy if exists "acesso aberto" on funcionarios;
 drop policy if exists "acesso aberto" on turnos;
 drop policy if exists "acesso aberto" on escalas;
 drop policy if exists "acesso aberto" on regras;
 drop policy if exists "acesso aberto" on configuracoes;
+drop policy if exists "acesso aberto" on horarios;
 
 create policy "acesso aberto" on funcionarios for all using (true) with check (true);
 create policy "acesso aberto" on turnos for all using (true) with check (true);
 create policy "acesso aberto" on escalas for all using (true) with check (true);
 create policy "acesso aberto" on regras for all using (true) with check (true);
 create policy "acesso aberto" on configuracoes for all using (true) with check (true);
+create policy "acesso aberto" on horarios for all using (true) with check (true);
 
 -- ---------------------------------------------------------------------
 -- Dados de exemplo (restaurante fictício Vila Tempero)
@@ -84,15 +103,15 @@ insert into turnos (nome, hora_inicio, hora_fim, ordem) values
   ('Jantar', '18:00', '23:30', 2)
 on conflict (nome) do nothing;
 
-insert into funcionarios (nome, funcao, telefone, cpf) values
-  ('Ana Souza',      'Salão',      '(11) 91234-0001', '12345678901'),
-  ('Bruno Lima',     'Cozinha',    '(11) 91234-0002', '23456789012'),
-  ('Carla Mendes',   'Caixa',      '(11) 91234-0003', '34567890123'),
-  ('Diego Alves',    'Cozinha',    '(11) 91234-0004', '45678901234'),
-  ('Elaine Costa',   'Salão',      '(11) 91234-0005', '56789012345'),
-  ('Fábio Rocha',    'Bar',        '(11) 91234-0006', '67890123456'),
-  ('Gabriela Nunes', 'Salão',      '(11) 91234-0007', '78901234567'),
-  ('Henrique Dias',  'Entregador', '(11) 91234-0008', '89012345678')
+insert into funcionarios (nome, funcao, telefone, cpf, exemplo) values
+  ('Ana Souza',      'Salão',      '(11) 91234-0001', '12345678901', true),
+  ('Bruno Lima',     'Cozinha',    '(11) 91234-0002', '23456789012', true),
+  ('Carla Mendes',   'Caixa',      '(11) 91234-0003', '34567890123', true),
+  ('Diego Alves',    'Cozinha',    '(11) 91234-0004', '45678901234', true),
+  ('Elaine Costa',   'Salão',      '(11) 91234-0005', '56789012345', true),
+  ('Fábio Rocha',    'Bar',        '(11) 91234-0006', '67890123456', true),
+  ('Gabriela Nunes', 'Salão',      '(11) 91234-0007', '78901234567', true),
+  ('Henrique Dias',  'Entregador', '(11) 91234-0008', '89012345678', true)
 on conflict (cpf) do nothing;
 
 insert into configuracoes (chave, valor) values

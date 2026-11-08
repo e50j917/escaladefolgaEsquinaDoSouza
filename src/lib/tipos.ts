@@ -7,6 +7,17 @@ export type Funcionario = {
   telefone: string | null;
   cpf: string | null;
   ativo: boolean;
+  papel?: string | null; // ex.: Abertura, Fechamento, Passador de chope
+  exemplo?: boolean; // true = funcionário fictício de exemplo
+};
+
+/** Horário de um funcionário num dia da semana (sem linha = não trabalha). */
+export type Horario = {
+  id?: string;
+  funcionario_id: string;
+  dia_semana: number; // 0 = domingo ... 6 = sábado
+  hora_inicio: string; // "15:00:00"
+  hora_fim: string; // "00:00:00" = meia-noite (termina no dia seguinte)
 };
 
 export type Turno = {
@@ -40,8 +51,18 @@ export type Configuracao = {
 export const FUNCOES_PADRAO = [
   "Salão",
   "Cozinha",
-  "Caixa",
   "Bar",
+  "Caixa",
+  "Estoque",
+  "Limpeza",
   "Entregador",
   "Gerência",
+];
+
+export const PAPEIS_PADRAO = [
+  "Abertura",
+  "Fechamento",
+  "Passador de chope",
+  "Gerente",
+  "Subgerente",
 ];
